@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS — AI Terminal</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050a0e;
+    --bg2: #0a1520;
+    --panel: #0d1e2e;
+    --border: #1a3a52;
+    --accent: #00d4ff;
+    --accent2: #00ff9d;
+    --accent3: #ff4d6d;
+    --text: #c8e6f5;
+    --text-dim: #5a8a9f;
+    --user-bubble: #0a2a3e;
+    --ai-bubble: #091a28;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+    --glow2: 0 0 20px rgba(0,255,157,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Scanline effect */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Grid background */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    position: relative;
+    z-index: 10;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  .logo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 38px; height: 38px;
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--glow);
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 10px rgba(0,212,255,0.3); }
+    50% { box-shadow: 0 0 25px rgba(0,212,255,0.7), 0 0 50px rgba(0,212,255,0.2); }
+  }
+
+  .logo-icon svg { width: 22px; height: 22px; fill: var(--accent); }
+
+  .logo-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-shadow: 0 0 20px rgba(0,212,255,0.5);
+  }
+
+  .logo-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .status-pill {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--accent2);
+    letter-spacing: 1px;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent2);
+    animation: blink 1.5s ease-in-out infinite;
+    box-shadow: 0 0 8px var(--accent2);
+  }
+
+  @keyframes blink {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Model selector */
+  .model-select-wrap {
+    position: relative;
+  }
+
+  .model-select-wrap label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 3px;
+  }
+
+  select#modelSelect {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    padding: 5px 28px 5px 10px;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  select#modelSelect:focus {
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+  }
+
+  .model-select-wrap::after {
+    content: '▾';
+    position: absolute;
+    right: 10px; bottom: 7px;
+    color: var(--accent);
+    font-size: 12px;
+    pointer-events: none;
+  }
+
+  /* API key button */
+  .api-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    padding: 7px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .api-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: var(--glow);
+  }
+
+  /* ─── MAIN LAYOUT ─── */
+  .main {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 0;
+    overflow-y: auto;
+  }
+
+  .sidebar-section {
+    padding: 0 16px 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+
+  .sidebar-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .new-chat-btn {
+    width: 100%;
+    background: linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,212,255,0.05));
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    display: flex; align-items: center; gap: 8px; justify-content: center;
+  }
+
+  .new-chat-btn:hover {
+    background: rgba(0,212,255,0.15);
+    box-shadow: var(--glow);
+    transform: translateY(-1px);
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .stat-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 8px;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent2);
+  }
+
+  .stat-lbl {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  /* Presets */
+  .preset-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    margin-bottom: 6px;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .preset-btn:hover {
+    background: rgba(0,212,255,0.08);
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateX(4px);
+  }
+
+  .preset-btn span { opacity: 0.7; font-size: 15px; }
+
+  /* ─── CHAT AREA ─── */
+  .chat-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    scroll-behavior: smooth;
+  }
+
+  #messages::-webkit-scrollbar { width: 4px; }
+  #messages::-webkit-scrollbar-track { background: transparent; }
+  #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* Welcome screen */
+  .welcome {
+    margin: auto;
+    text-align: center;
+    padding: 40px 20px;
+    animation: fadeUp 0.6s ease-out;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .welcome-hex {
+    width: 80px; height: 80px;
+    margin: 0 auto 24px;
+    background: linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,255,157,0.1));
+    border: 2px solid var(--accent);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--glow);
+    font-size: 36px;
+  }
+
+  .welcome h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--accent);
+    letter-spacing: 6px;
+    text-shadow: 0 0 30px rgba(0,212,255,0.4);
+    margin-bottom: 8px;
+  }
+
+  .welcome p {
+    color: var(--text-dim);
+    font-size: 15px;
+    line-height: 1.6;
+    max-width: 400px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .welcome-chips {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: center;
+    margin-top: 28px;
+    max-width: 500px;
+    margin-left: auto; margin-right: auto;
+  }
+
+  .chip {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,212,255,0.08);
+    transform: translateY(-2px);
+    box-shadow: var(--glow);
+  }
+
+  /* Messages */
+  .msg-row {
+    display: flex;
+    gap: 14px;
+    animation: slideIn 0.35s ease-out;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg-row.user { flex-direction: row-reverse; }
+
+  .avatar {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    border: 1px solid var(--border);
+  }
+
+  .avatar.ai {
+    background: linear-gradient(135deg, #0a2a3e, #081520);
+    border-color: var(--accent);
+    box-shadow: 0 0 12px rgba(0,212,255,0.2);
+    font-size: 18px;
+  }
+
+  .avatar.user {
+    background: linear-gradient(135deg, #1a2e20, #0a1a10);
+    border-color: var(--accent2);
+    box-shadow: 0 0 12px rgba(0,255,157,0.2);
+  }
+
+  .bubble-wrap { flex: 1; max-width: 75%; }
+
+  .msg-meta {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .msg-row.user .bubble-wrap { align-items: flex-end; }
+  .msg-row.user .msg-meta { text-align: right; }
+
+  .bubble {
+    background: var(--ai-bubble);
+    border: 1px solid var(--border);
+    border-radius: 2px 12px 12px 12px;
+    padding: 14px 18px;
+    font-size: 15px;
+    line-height: 1.7;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 400;
+    color: var(--text);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .msg-row.user .bubble {
+    background: var(--user-bubble);
+    border-color: rgba(0,255,157,0.2);
+    border-radius: 12px 2px 12px 12px;
+  }
+
+  .bubble::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+  }
+
+  .msg-row.user .bubble::before {
+    left: auto; right: 0;
+    background: linear-gradient(to bottom, var(--accent2), transparent);
+  }
+
+  /* Code blocks in messages */
+  .bubble pre {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 10px 0;
+    overflow-x: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+  }
+
+  .bubble code:not(pre code) {
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.2);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+  }
+
+  /* Typing indicator */
+  .typing-bubble {
+    display: flex; align-items: center; gap: 5px;
+    padding: 14px 18px;
+    background: var(--ai-bubble);
+    border: 1px solid var(--border);
+    border-radius: 2px 12px 12px 12px;
+    width: fit-content;
+  }
+
+  .typing-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: typingBounce 1.2s ease-in-out infinite;
+  }
+
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes typingBounce {
+    0%,100% { transform: translateY(0); opacity: 0.4; }
+    50% { transform: translateY(-5px); opacity: 1; }
+  }
+
+  /* ─── INPUT AREA ─── */
+  .input-area {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 16px 28px 20px;
+    flex-shrink: 0;
+  }
+
+  .input-toolbar {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .tool-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .tool-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .temp-wrap {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .temp-wrap label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 80px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    cursor: pointer;
+  }
+
+  #tempVal {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    width: 28px;
+  }
+
+  .input-box {
+    display: flex; align-items: flex-end; gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px 4px 4px 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .input-box:focus-within {
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+  }
+
+  #userInput {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 400;
+    resize: none;
+    min-height: 44px;
+    max-height: 160px;
+    padding: 11px 0;
+    line-height: 1.5;
+  }
+
+  #userInput::placeholder {
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+  }
+
+  .send-btn {
+    width: 44px; height: 44px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #00d4ff, #0099bb);
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    box-shadow: 0 0 15px rgba(0,212,255,0.3);
+  }
+
+  .send-btn:hover {
+    background: linear-gradient(135deg, #00eeff, #00aad4);
+    box-shadow: 0 0 25px rgba(0,212,255,0.5);
+    transform: scale(1.05);
+  }
+
+  .send-btn:active { transform: scale(0.97); }
+
+  .send-btn svg { width: 18px; height: 18px; fill: #050a0e; }
+
+  .input-footer {
+    margin-top: 8px;
+    display: flex; align-items: center; gap: 16px;
+  }
+
+  .footer-hint {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  .token-counter {
+    margin-left: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .token-counter span {
+    color: var(--accent2);
+  }
+
+  /* ─── API KEY MODAL ─── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(5,10,14,0.85);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.active { display: flex; }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 32px;
+    width: 420px;
+    box-shadow: var(--glow), 0 30px 60px rgba(0,0,0,0.5);
+    animation: modalIn 0.3s ease-out;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.9) translateY(-20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .modal h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+
+  .modal p {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .modal p a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .modal-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  .modal-input {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    padding: 12px 14px;
+    border-radius: 6px;
+    outline: none;
+    margin-bottom: 20px;
+    transition: border-color 0.2s;
+  }
+
+  .modal-input:focus { border-color: var(--accent); }
+
+  .modal-actions { display: flex; gap: 10px; }
+
+  .modal-save {
+    flex: 1;
+    background: linear-gradient(135deg, #00d4ff, #0099bb);
+    border: none;
+    color: var(--bg);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+  }
+
+  .modal-save:hover { box-shadow: var(--glow); }
+
+  .modal-cancel {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    padding: 12px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .modal-cancel:hover { border-color: var(--accent3); color: var(--accent3); }
+
+  /* Scrollbar fix for sidebar */
+  .sidebar::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    header { padding: 10px 14px; }
+    .logo-text { font-size: 16px; }
+    #messages { padding: 16px; }
+    .input-area { padding: 12px 14px 16px; }
+    .input-toolbar { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-wrap">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <div>
+      <div class="logo-text">NEXUS</div>
+      <div class="logo-sub">AI TERMINAL v2.7</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-pill"><div class="status-dot"></div> ONLINE</div>
+    <div class="model-select-wrap">
+      <label>MODEL</label>
+      <select id="modelSelect">
+        <option value="openai/gpt-4o-mini">GPT-4o Mini</option>
+        <option value="openai/gpt-4o">GPT-4o</option>
+        <option value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+        <option value="anthropic/claude-3-haiku">Claude 3 Haiku</option>
+        <option value="meta-llama/llama-3.1-70b-instruct">Llama 3.1 70B</option>
+        <option value="meta-llama/llama-3.1-8b-instruct">Llama 3.1 8B</option>
+        <option value="google/gemini-flash-1.5">Gemini Flash 1.5</option>
+        <option value="mistralai/mistral-7b-instruct">Mistral 7B</option>
+        <option value="deepseek/deepseek-chat">DeepSeek Chat</option>
+        <option value="qwen/qwen-2.5-72b-instruct">Qwen 2.5 72B</option>
+      </select>
+    </div>
+    <button class="api-btn" onclick="openModal()">⚙ API KEY</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">SESSION</div>
+      <button class="new-chat-btn" onclick="clearChat()">+ NEW SESSION</button>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">METRICS</div>
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-val" id="msgCount">0</div>
+          <div class="stat-lbl">MSGS</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="tokenCount">0</div>
+          <div class="stat-lbl">TOKENS</div>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">QUICK PROMPTS</div>
+      <button class="preset-btn" onclick="usePreset('Explain quantum computing in simple terms')"><span>⚛</span> Quantum Physics</button>
+      <button class="preset-btn" onclick="usePreset('Write a Python script to sort a list of dictionaries by a key')"><span>🐍</span> Python Script</button>
+      <button class="preset-btn" onclick="usePreset('What are the latest trends in AI in 2024?')"><span>🤖</span> AI Trends</button>
+      <button class="preset-btn" onclick="usePreset('Give me a 7-day workout plan for muscle building')"><span>💪</span> Fitness Plan</button>
+      <button class="preset-btn" onclick="usePreset('Write a haiku about a neural network')"><span>✍</span> Creative Writing</button>
+      <button class="preset-btn" onclick="usePreset('Debug this code and explain what was wrong')"><span>🐛</span> Debug Code</button>
+    </div>
+    <div style="padding:0 16px">
+      <div class="sidebar-label" style="margin-bottom:8px">SYSTEM PROMPT</div>
+      <textarea id="systemPrompt" style="
+        width:100%;background:var(--panel);border:1px solid var(--border);
+        color:var(--text-dim);font-family:'Share Tech Mono',monospace;font-size:11px;
+        padding:10px;border-radius:6px;resize:vertical;min-height:80px;outline:none;
+        line-height:1.5;
+      " placeholder="You are a helpful AI assistant...">You are NEXUS, an advanced AI assistant. Be concise, accurate, and helpful. Format code with proper syntax.</textarea>
+    </div>
+  </aside>
+
+  <!-- CHAT -->
+  <div class="chat-wrap">
+    <div id="messages">
+      <div class="welcome" id="welcomeScreen">
+        <div class="welcome-hex">⬡</div>
+        <h1>NEXUS</h1>
+        <p>Neural Exchange & Unified eXpert System<br>Ready for your query. What shall we explore?</p>
+        <div class="welcome-chips">
+          <div class="chip" onclick="usePreset('Explain machine learning to a beginner')">Explain ML</div>
+          <div class="chip" onclick="usePreset('Write a creative short story in 3 paragraphs')">Write a story</div>
+          <div class="chip" onclick="usePreset('What is the difference between SQL and NoSQL?')">SQL vs NoSQL</div>
+          <div class="chip" onclick="usePreset('Give me 5 productivity tips for developers')">Dev tips</div>
+          <div class="chip" onclick="usePreset('Translate hello world in 5 languages')">Translate</div>
+          <div class="chip" onclick="usePreset('How does blockchain work?')">Blockchain</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INPUT -->
+    <div class="input-area">
+      <div class="input-toolbar">
+        <button class="tool-btn" onclick="clearChat()">⟳ CLEAR</button>
+        <button class="tool-btn" onclick="exportChat()">↓ EXPORT</button>
+        <button class="tool-btn" onclick="copyLast()">⎘ COPY</button>
+        <div class="temp-wrap">
+          <label>TEMP</label>
+          <input type="range" id="tempSlider" min="0" max="2" step="0.1" value="0.7" oninput="document.getElementById('tempVal').textContent=this.value">
+          <span id="tempVal">0.7</span>
+        </div>
+      </div>
+      <div class="input-box">
+        <textarea id="userInput" placeholder="Transmit your query to NEXUS..." rows="1"></textarea>
+        <button class="send-btn" onclick="sendMessage()" id="sendBtn">
+          <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+      <div class="input-footer">
+        <span class="footer-hint">ENTER to send · SHIFT+ENTER for newline</span>
+        <span class="token-counter">EST. TOKENS: <span id="liveTokens">0</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- API KEY MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>⚙ CONFIGURE API</h2>
+    <p>Enter your <a href="https://openrouter.ai/keys" target="_blank">OpenRouter API key</a>. It is stored only in your browser's localStorage and never sent anywhere except OpenRouter.</p>
+    <div class="modal-label">OPENROUTER API KEY</div>
+    <input type="password" class="modal-input" id="apiKeyInput" placeholder="sk-or-v1-...">
+    <div class="modal-actions">
+      <button class="modal-save" onclick="saveKey()">SAVE KEY</button>
+      <button class="modal-cancel" onclick="closeModal()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ─── STATE ───────────────────────────────────────
+  let messages = [];
+  let totalTokens = 0;
+  let isStreaming = false;
+
+  // ─── INIT ─────────────────────────────────────────
+  window.onload = () => {
+    const saved = localStorage.getItem('nexus_apikey');
+    if (saved) document.getElementById('apiKeyInput').value = saved;
+
+    const ta = document.getElementById('userInput');
+    ta.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+    ta.addEventListener('input', () => {
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+      const words = ta.value.trim().split(/\s+/).filter(Boolean).length;
+      document.getElementById('liveTokens').textContent = Math.round(words * 1.3);
+    });
+  };
+
+  // ─── MODAL ───────────────────────────────────────
+  function openModal() { document.getElementById('modalOverlay').classList.add('active'); }
+  function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+  function saveKey() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    if (key) { localStorage.setItem('nexus_apikey', key); closeModal(); showToast('API key saved!'); }
+  }
+  document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+  // ─── SEND MESSAGE ─────────────────────────────────
+  async function sendMessage() {
+    if (isStreaming) return;
+    const apiKey = localStorage.getItem('nexus_apikey');
+    if (!apiKey) { openModal(); return; }
+
+    const input = document.getElementById('userInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+    document.getElementById('liveTokens').textContent = '0';
+
+    // Hide welcome
+    const welcome = document.getElementById('welcomeScreen');
+    if (welcome) welcome.remove();
+
+    // Add user message
+    messages.push({ role: 'user', content: text });
+    appendMessage('user', text);
+    updateStats();
+
+    // Show typing
+    const typingEl = showTyping();
+    isStreaming = true;
+    toggleSendBtn(false);
+
+    try {
+      const model = document.getElementById('modelSelect').value;
+      const temp = parseFloat(document.getElementById('tempSlider').value);
+      const sysPrompt = document.getElementById('systemPrompt').value.trim();
+
+      const payload = {
+        model,
+        temperature: temp,
+        stream: true,
+        messages: [
+          ...(sysPrompt ? [{ role: 'system', content: sysPrompt }] : []),
+          ...messages
+        ]
+      };
+
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.href,
+          'X-Title': 'NEXUS AI Terminal'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error?.message || `HTTP ${res.status}`);
+      }
+
+      typingEl.remove();
+      const aiEl = appendMessage('ai', '');
+      const bubbleContent = aiEl.querySelector('.bubble-text');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n').filter(l => l.startsWith('data: '));
+
+        for (const line of lines) {
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(data);
+            const delta = parsed.choices?.[0]?.delta?.content || '';
+            if (delta) {
+              fullText += delta;
+              bubbleContent.innerHTML = formatMessage(fullText);
+              scrollToBottom();
+            }
+            const usage = parsed.usage;
+            if (usage) { totalTokens += usage.total_tokens || 0; updateStats(); }
+          } catch (_) {}
+        }
+      }
+
+      messages.push({ role: 'assistant', content: fullText });
+      updateStats();
+
+    } catch (err) {
+      typingEl?.remove();
+      appendMessage('ai', `⚠ Error: ${err.message}`, true);
+    }
+
+    isStreaming = false;
+    toggleSendBtn(true);
+  }
+
+  // ─── RENDER ───────────────────────────────────────
+  function appendMessage(role, text, isError = false) {
+    const container = document.getElementById('messages');
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const row = document.createElement('div');
+    row.className = `msg-row ${role}`;
+
+    const avatarChar = role === 'ai' ? '⬡' : '◈';
+    const metaName = role === 'ai' ? 'NEXUS' : 'YOU';
+
+    row.innerHTML = `
+      <div class="avatar ${role}">${avatarChar}</div>
+      <div class="bubble-wrap">
+        <div class="msg-meta">${metaName} · ${time}</div>
+        <div class="bubble ${isError ? 'style="border-color:var(--accent3)"' : ''}">
+          <span class="bubble-text">${formatMessage(text)}</span>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(row);
+    scrollToBottom();
+    return row;
+  }
+
+  function showTyping() {
+    const container = document.getElementById('messages');
+    const wrap = document.createElement('div');
+    wrap.className = 'msg-row ai';
+    wrap.innerHTML = `
+      <div class="avatar ai">⬡</div>
+      <div class="bubble-wrap">
+        <div class="msg-meta">NEXUS · processing...</div>
+        <div class="typing-bubble">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+        </div>
+      </div>
+    `;
+    container.appendChild(wrap);
+    scrollToBottom();
+    return wrap;
+  }
+
+  function formatMessage(text) {
+    // Code blocks
+    text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
+      `<pre><code>${escHtml(code.trim())}</code></pre>`
+    );
+    // Inline code
+    text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Bold
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong style="color:var(--accent2)">$1</strong>');
+    // Italic
+    text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Newlines
+    text = text.replace(/\n/g, '<br>');
+    return text;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ─── UTILS ────────────────────────────────────────
+  function scrollToBottom() {
+    const m = document.getElementById('messages');
+    m.scrollTop = m.scrollHeight;
+  }
+
+  function toggleSendBtn(enabled) {
+    const btn = document.getElementById('sendBtn');
+    btn.style.opacity = enabled ? '1' : '0.4';
+    btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+  }
+
+  function updateStats() {
+    document.getElementById('msgCount').textContent = messages.length;
+    document.getElementById('tokenCount').textContent = totalTokens > 999
+      ? (totalTokens / 1000).toFixed(1) + 'k'
+      : totalTokens;
+  }
+
+  function clearChat() {
+    messages = [];
+    totalTokens = 0;
+    updateStats();
+    const container = document.getElementById('messages');
+    container.innerHTML = `
+      <div class="welcome" id="welcomeScreen">
+        <div class="welcome-hex">⬡</div>
+        <h1>NEXUS</h1>
+        <p>Session cleared. Ready for new input.</p>
+        <div class="welcome-chips">
+          <div class="chip" onclick="usePreset('Explain machine learning to a beginner')">Explain ML</div>
+          <div class="chip" onclick="usePreset('Write a creative short story in 3 paragraphs')">Write a story</div>
+          <div class="chip" onclick="usePreset('What is the difference between SQL and NoSQL?')">SQL vs NoSQL</div>
+          <div class="chip" onclick="usePreset('Give me 5 productivity tips for developers')">Dev tips</div>
+        </div>
+      </div>`;
+  }
+
+  function usePreset(text) {
+    const input = document.getElementById('userInput');
+    input.value = text;
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+    input.focus();
+  }
+
+  function exportChat() {
+    if (!messages.length) return;
+    const content = messages.map(m => `[${m.role.toUpperCase()}]\n${m.content}`).join('\n\n---\n\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `nexus-chat-${Date.now()}.txt`;
+    a.click();
+  }
+
+  function copyLast() {
+    const aiMsgs = messages.filter(m => m.role === 'assistant');
+    if (aiMsgs.length === 0) return;
+    navigator.clipboard.writeText(aiMsgs[aiMsgs.length - 1].content);
+    showToast('Copied to clipboard!');
+  }
+
+  function showToast(msg) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    Object.assign(t.style, {
+      position:'fixed', bottom:'30px', right:'30px', zIndex:'9999',
+      background:'var(--accent)', color:'var(--bg)',
+      fontFamily:"'Share Tech Mono',monospace", fontSize:'12px',
+      padding:'10px 18px', borderRadius:'6px',
+      boxShadow:'var(--glow)', letterSpacing:'1px',
+      animation:'fadeUp 0.3s ease-out'
+    });
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+  }
+</script>
+</body>
+</html>
